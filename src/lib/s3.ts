@@ -7,6 +7,8 @@ import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { TRPCError } from "@trpc/server";
 import { createClient } from '@supabase/supabase-js'
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
+import { getUserSubscriptionPlan } from "./stripe";
+import { PLANS } from "@/config/stripe";
 
 export const uploadToS3 = async (file: File)=>{
     try{
@@ -15,6 +17,18 @@ export const uploadToS3 = async (file: File)=>{
         const user = await getUser();
         if(!user || !user.id){
             throw new TRPCError({code: "UNAUTHORIZED"});
+        }
+
+        const isSubscribed = (await getUserSubscriptionPlan()).isSubscribed
+        
+        if(file.size > 1*1024*1024 && !isSubscribed){
+            // not alllowed to proceed further
+            throw new Error("File size exceeds limit for free users.");
+        }
+
+        if(file.size > 16*1024*1024 && isSubscribed){
+            // more than 16 mb not allowed
+            throw new Error("File size exceeds 16MB limit for pro users.");
         }
 
         // configuring AWS S3 bucket
@@ -60,11 +74,19 @@ export const uploadToS3 = async (file: File)=>{
             const loader = new PDFLoader(blob);
             const pageLevelDocs = await loader.load();
             const pagesAmt = pageLevelDocs.length;
-            // const splitter = new RecursiveCharacterTextSplitter({
-            //     chunkSize: 1000,
-            //     chunkOverlap: 15,
-            //   });
-            // const texts = await splitter.splitDocuments(pageLevelDocs);
+
+            let isProExceeded = false
+            let isFreeExceeded = false
+            if(pagesAmt > PLANS.find((plan) => plan.name === 'Pro')!.pagesPerPdf){
+                isProExceeded = true
+            }
+            if(pagesAmt > PLANS.find((plan) => plan.name === 'Free')!.pagesPerPdf){
+                isFreeExceeded = true
+            }
+            
+            if ((isSubscribed && isProExceeded) || (!isSubscribed && isFreeExceeded)) {
+                throw new Error("Page limit exceeded or subscription required. Upload failed.");
+            }
             
             const embeddings = new OpenAIEmbeddings({
                 openAIApiKey: process.env.OPENAI_API_KEY!

@@ -75,7 +75,7 @@ const UploadDropZone = ()=>{
                   })
             }
             // greater than 4 MB
-            if(file.size > 4*1024*1024){
+            if(file.size > 16*1024*1024){
                 return toast({
                     variant: "destructive",
                     title: "Uh oh! Something went wrong.",
@@ -83,29 +83,41 @@ const UploadDropZone = ()=>{
                   })
             }
 
-            setIsUploading(true)
-            const progressInterval = startSimulatedProgress()
+            try{
+                setIsUploading(true)
+                const progressInterval = startSimulatedProgress()
 
-            const fileData = new FormData();
-            fileData.append('file', file);
+                const fileData = new FormData();
+                fileData.append('file', file);
 
-            const data = await fetch("/api/s3/upload",{
-                method: "POST",
-                body: fileData,
-            });
-            const fileInfo = await data.json()
-            
-            if (!fileInfo) {
-                return toast({
+                const response = await fetch("/api/s3/upload",{
+                    method: "POST",
+                    body: fileData,
+                });                
+
+                if (!response.ok) {
+                    throw new Error("Failed to upload file.");
+                }
+
+                const fileInfo = await response.json();
+                
+                if (!fileInfo) {
+                    throw new Error("File info not received.");  
+                }
+
+                clearInterval(progressInterval)
+                setUploadProgress(100)
+                startPolling({ id: fileInfo.fileId });
+            }catch(error){
+                toast({
                     variant: "destructive",
-                    title: "Uh oh! Something went wrong.",
-                    description: "Try again later...",
-                })   
+                    title: "Upload failed",
+                    description: "Could not upload file.",
+                });
+        
+                setIsUploading(false);
+                setUploadProgress(0);
             }
-
-            clearInterval(progressInterval)
-            setUploadProgress(100)
-            startPolling({ id: fileInfo.fileId });
         }}>
             {({getRootProps, getInputProps, acceptedFiles})=>(
                 <div {...getRootProps()} className='border h-64 m-4 border-dashed border-gray-300 rounded-lg'>

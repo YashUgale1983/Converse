@@ -9,7 +9,16 @@ export const POST = async (req: Request)=>{
     if (!file) {
         return NextResponse.json({ success: false })
     }
-   const data = await uploadToS3(file);
-   return NextResponse.json(data);
+   const response = await uploadToS3(file);
+    if (response instanceof Error) {
+        return NextResponse.error();
+    }
+   
+   return NextResponse.json({
+        success: true,
+        fileId: response.fileId,
+        file_key: response.file_key,
+        file_name: response.file_name,
+    });
 }
 
