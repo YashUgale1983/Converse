@@ -97,7 +97,7 @@ const UploadDropZone = ()=>{
                     body: fileData,
                 });                
 
-                console.log("here 2");
+                console.log("here 2 : ", response);
 
                 if (!response.ok) {
                     console.log("here 3");

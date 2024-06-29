@@ -10,6 +10,10 @@ export const POST = async (req: Request)=>{
         return NextResponse.json({ success: false })
     }
    const response = await uploadToS3(file);
+
+    console.log("inside route.ts - response - ", response);
+    
+
     if (response instanceof Error) {
         return NextResponse.error();
     }
