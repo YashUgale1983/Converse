@@ -8,7 +8,8 @@ import { OpenAIEmbeddings } from "@langchain/openai";
 import { NextRequest } from "next/server";
 import { OpenAIStream, StreamingTextResponse } from 'ai'
 import { createClient } from '@supabase/supabase-js'
-import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
+import { SupabaseVectorStore, SupabaseFilterRPCCall } from "@langchain/community/vectorstores/supabase";
+// import { SupabaseFilterRPCCall, SupabaseVectorStore } from 'langchain/vectorstores/supabase'
 
 export const POST = async (req : NextRequest)=>{
     const body = await req.json();
@@ -72,10 +73,13 @@ export const POST = async (req : NextRequest)=>{
         {
             client,
             tableName: "documents",
-            queryName: "match_documents",
+            queryName: "match_documents"
         }
-        );
-    const results = await vectorStore.similaritySearch(message, 4);
+    );
+
+    // console.log("vector store - ", vectorStore); 
+    const results = await vectorStore.similaritySearch(message, 4);  
+    // console.log("results - ", results);
 
     // retrieving previous messages and formatting them in a particular format for OpenAI
     const prevMessages = await db.message.findMany({
@@ -96,7 +100,7 @@ export const POST = async (req : NextRequest)=>{
     // here, we use a custom promt to let GPT know of the previous conversation, context, etc.
     const response = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
-        temperature: 0,
+        temperature: 0.9,
         stream: true,
         messages: [
           {

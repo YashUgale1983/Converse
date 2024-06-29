@@ -90,25 +90,40 @@ const UploadDropZone = ()=>{
                 const fileData = new FormData();
                 fileData.append('file', file);
 
+                console.log("here 1");
+
                 const response = await fetch("/api/s3/upload",{
                     method: "POST",
                     body: fileData,
                 });                
 
+                console.log("here 2");
+
                 if (!response.ok) {
+                    console.log("here 3");
                     throw new Error("Failed to upload file.");
                 }
 
+                console.log("here 4");
+
                 const fileInfo = await response.json();
+
+                console.log("here 5");
                 
                 if (!fileInfo) {
+                    console.log("here 6");
                     throw new Error("File info not received.");  
                 }
+
+                console.log("here 7");
 
                 clearInterval(progressInterval)
                 setUploadProgress(100)
                 startPolling({ id: fileInfo.fileId });
+
+                console.log("here 8");
             }catch(error){
+                console.log("here 9");
                 toast({
                     variant: "destructive",
                     title: "Upload failed",
